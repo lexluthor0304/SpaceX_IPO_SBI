@@ -1,0 +1,22 @@
+{
+  "name": "sbi-ipo-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SBI Securities IPO application availability monitor with email notifications",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create sbi-ipo-monitor-db",
+    "db:migrate:local": "wrangler d1 migrations apply sbi-ipo-monitor-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply sbi-ipo-monitor-db --remote",
+    "db:init": "wrangler d1 execute sbi-ipo-monitor-db --remote --file=./migrations/0001_init.sql",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250503.0",
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0",
+    "wrangler": "^4.15.0"
+  }
+}

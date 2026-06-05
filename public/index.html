@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SBI証券 外国株式IPOの「購入申込する」ボタンが押せるようになった瞬間を、メールでお知らせします。">
+  <meta name="theme-color" content="#06060e">
+  <title>SBI IPO Monitor — 申込可能をいち早く通知</title>
+
+  <!-- Fonts: Orbitron for display, Noto Sans JP for body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===================================================================
+       CSS Custom Properties
+       =================================================================== */
+    :root {
+      --space-deep: #06060e;
+      --space-dark: #0a0a1a;
+      --space-mid: #12122a;
+      --nebula-purple: #6c5ce7;
+      --nebula-blue: #3d5af1;
+      --starlight: #e8e8f0;
+      --starlight-dim: #8888a0;
+      --gold-accent: #c9a84c;
+      --gold-glow: #f0d060;
+      --launch-green: #00d2a0;
+      --alert-red: #ff4757;
+      --card-bg: rgba(18, 18, 42, 0.6);
+      --card-border: rgba(108, 92, 231, 0.15);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --font-display: 'Orbitron', sans-serif;
+      --font-body: 'Noto Sans JP', sans-serif;
+    }
+
+    /* ===================================================================
+       Reset & Base
+       =================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--space-deep);
+      color: var(--starlight);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ===================================================================
+       Starfield Canvas
+       =================================================================== */
+    #starfield {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ===================================================================
+       Layout
+       =================================================================== */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      justify-content: center;
+    }
+
+    /* ===================================================================
+       Header / Brand
+       =================================================================== */
+    .brand {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: rgba(108, 92, 231, 0.1);
+      border: 1px solid rgba(108, 92, 231, 0.25);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      color: var(--nebula-purple);
+      margin-bottom: 24px;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .brand-badge .pulse-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--launch-green);
+      box-shadow: 0 0 8px var(--launch-green);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    /* Lab branding — prominent */
+    .lab-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease-out 0.05s both;
+    }
+
+    .lab-brand a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      border-radius: 100px;
+      background: linear-gradient(135deg, rgba(108, 92, 231, 0.2) 0%, rgba(61, 90, 241, 0.15) 100%);
+      border: 1px solid rgba(108, 92, 231, 0.35);
+      color: var(--starlight);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(108, 92, 231, 0.1);
+    }
+
+    .lab-brand a:hover {
+      border-color: var(--gold-accent);
+      box-shadow: 0 0 30px rgba(108, 92, 231, 0.25), 0 0 60px rgba(201, 168, 76, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .lab-brand .lab-icon {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--nebula-purple), var(--nebula-blue));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 900;
+      color: #fff;
+      font-family: var(--font-display);
+    }
+
+    .lab-brand .lab-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.2;
+    }
+
+    .lab-brand .lab-name {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+
+    .lab-brand .lab-tagline {
+      font-size: 10px;
+      color: var(--starlight-dim);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.5); }
+    }
+
+    .brand h1 {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: clamp(28px, 6vw, 48px);
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+      background: linear-gradient(
+        135deg,
+        var(--starlight) 0%,
+        #b8b8d0 30%,
+        var(--gold-glow) 60%,
+        var(--starlight) 100%
+      );
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 4s ease-in-out infinite;
+      margin-bottom: 12px;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.3); }
+    }
+
+    .brand .subtitle {
+      font-size: 15px;
+      font-weight: 300;
+      color: var(--starlight-dim);
+      letter-spacing: 0.02em;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+
+    /* ===================================================================
+       Status Monitor Card
+       =================================================================== */
+    .monitor-card {
+      width: 100%;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.6s ease-out 0.2s both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .monitor-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      right: 0; height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(108, 92, 231, 0.4) 20%,
+        rgba(108, 92, 231, 0.6) 50%,
+        rgba(108, 92, 231, 0.4) 80%,
+        transparent 100%
+      );
+    }
+
+    .monitor-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      right: 0; bottom: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(108, 92, 231, 0.015) 2px,
+          rgba(108, 92, 231, 0.015) 4px
+        );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .monitor-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .monitor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .monitor-label {
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--starlight-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .monitor-label .indicator {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--launch-green);
+      box-shadow: 0 0 10px rgba(0, 210, 160, 0.6);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    .monitor-time {
+      font-family: var(--font-display);
+      font-size: 11px;
+      color: var(--starlight-dim);
+      letter-spacing: 0.05em;
+    }
+
+    .status-display {
+      background: rgba(6, 6, 14, 0.5);
+      border: 1px solid rgba(108, 92, 231, 0.1);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .status-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .status-text {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--starlight-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .status-detail {
+      font-size: 14px;
+      color: var(--starlight-dim);
+      font-weight: 300;
+      line-height: 1.5;
+    }
+
+    /* Status states */
+    .monitor-card[data-state="checking"] .status-text { color: var(--nebula-purple); }
+    .monitor-card[data-state="monitoring"] .status-text { color: var(--launch-green); }
+    .monitor-card[data-state="available"] .status-text { color: var(--gold-accent); }
+    .monitor-card[data-state="unavailable"] .status-text { color: var(--starlight-dim); }
+    .monitor-card[data-state="error"] .status-text { color: var(--alert-red); }
+
+    .monitor-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-item {
+      background: rgba(6, 6, 14, 0.4);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--starlight);
+      letter-spacing: 0.04em;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--starlight-dim);
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ===================================================================
+       Email Form Card
+       =================================================================== */
+    .form-card {
+      width: 100%;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      animation: fadeInUp 0.6s ease-out 0.3s both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .form-card::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(108, 92, 231, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      animation: orbit-glow 8s linear infinite;
+    }
+
+    @keyframes orbit-glow {
+      0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+      50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.3); }
+      100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
+    }
+
+    .form-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .form-card h2 {
+      font-family: var(--font-body);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: 0.01em;
+    }
+
+    .form-card .form-desc {
+      font-size: 13px;
+      color: var(--starlight-dim);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 14px 18px;
+      background: rgba(6, 6, 14, 0.6);
+      border: 1px solid rgba(108, 92, 231, 0.2);
+      border-radius: var(--radius-md);
+      color: var(--starlight);
+      font-family: var(--font-body);
+      font-size: 15px;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    .input-group input::placeholder {
+      color: rgba(200, 200, 220, 0.3);
+    }
+
+    .input-group input:focus {
+      border-color: var(--nebula-purple);
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15),
+                  0 0 20px rgba(108, 92, 231, 0.1);
+    }
+
+    .btn-submit {
+      padding: 14px 28px;
+      background: linear-gradient(135deg, var(--nebula-purple) 0%, var(--nebula-blue) 100%);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-submit::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .btn-submit:hover::before {
+      left: 100%;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ===================================================================
+       Success / Message State
+       =================================================================== */
+    .form-success {
+      display: none;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .form-success.active {
+      display: block;
+      animation: fadeInUp 0.4s ease-out;
+    }
+
+    .form-success .success-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+      animation: scaleIn 0.5s ease-out;
+    }
+
+    @keyframes scaleIn {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .form-success h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .form-success p {
+      font-size: 14px;
+      color: var(--starlight-dim);
+    }
+
+    /* ===================================================================
+       Error State
+       =================================================================== */
+    .form-error {
+      display: none;
+      padding: 12px 16px;
+      background: rgba(255, 71, 87, 0.1);
+      border: 1px solid rgba(255, 71, 87, 0.2);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--alert-red);
+    }
+
+    .form-error.active {
+      display: block;
+    }
+
+    /* ===================================================================
+       Toast / Global Message
+       =================================================================== */
+    .toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-120px);
+      padding: 14px 24px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 100;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.success {
+      background: rgba(0, 210, 160, 0.15);
+      border: 1px solid rgba(0, 210, 160, 0.3);
+      color: var(--launch-green);
+    }
+
+    .toast.error {
+      background: rgba(255, 71, 87, 0.15);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      color: var(--alert-red);
+    }
+
+    /* ===================================================================
+       Footer
+       =================================================================== */
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 12px;
+      color: rgba(200, 200, 220, 0.3);
+      animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+
+    .footer a {
+      color: rgba(200, 200, 220, 0.5);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .footer a:hover {
+      color: var(--nebula-purple);
+    }
+
+    .footer-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 16px;
+      padding: 8px 16px;
+      border-radius: 100px;
+      background: rgba(108, 92, 231, 0.08);
+      border: 1px solid rgba(108, 92, 231, 0.15);
+      font-size: 12px;
+      color: var(--starlight-dim);
+      transition: all 0.3s ease;
+    }
+
+    .footer-brand:hover {
+      border-color: var(--nebula-purple);
+      background: rgba(108, 92, 231, 0.15);
+      color: var(--starlight);
+    }
+
+    .footer-brand .lab-logo {
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--nebula-purple);
+    }
+
+    /* ===================================================================
+       Animations
+       =================================================================== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===================================================================
+       Responsive
+       =================================================================== */
+    @media (max-width: 480px) {
+      .container {
+        padding: 24px 16px 40px;
+      }
+
+      .input-group {
+        flex-direction: column;
+      }
+
+      .brand h1 {
+        font-size: 24px;
+      }
+
+      .monitor-card, .form-card {
+        padding: 20px;
+      }
+
+      .monitor-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-value {
+        font-size: 18px;
+      }
+    }
+
+    /* ===================================================================
+       Loading spinner for button
+       =================================================================== */
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ===================================================================
+       Decorative orbital ring
+       =================================================================== */
+    .orbital-decoration {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+      border: 1px solid rgba(108, 92, 231, 0.06);
+      border-radius: 50%;
+      animation: orbit-rotate 60s linear infinite;
+    }
+
+    @keyframes orbit-rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    #orbit-1 {
+      width: 600px; height: 600px;
+      top: 50%; left: 50%;
+      margin-top: -300px; margin-left: -300px;
+      border-color: rgba(108, 92, 231, 0.04);
+      animation-duration: 80s;
+    }
+
+    #orbit-2 {
+      width: 400px; height: 400px;
+      top: 50%; left: 50%;
+      margin-top: -200px; margin-left: -200px;
+      border-color: rgba(201, 168, 76, 0.04);
+      animation-duration: 55s;
+      animation-direction: reverse;
+    }
+  </style>
+</head>
+<body>
+  <!-- Starfield background -->
+  <canvas id="starfield"></canvas>
+
+  <!-- Orbital decorations -->
+  <div id="orbit-1" class="orbital-decoration"></div>
+  <div id="orbit-2" class="orbital-decoration"></div>
+
+  <!-- Toast notifications -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Main content -->
+  <main class="container">
+    <!-- Brand -->
+    <header class="brand">
+      <!-- Neoanaloglab — 一番目立つ位置 -->
+      <div class="lab-brand">
+        <a href="https://neoanaloglab.com/" target="_blank" rel="noopener">
+          <span class="lab-icon">N</span>
+          <span class="lab-text">
+            <span class="lab-name">neoanaloglab</span>
+            <span class="lab-tagline">ネオアナログ株式会社</span>
+          </span>
+        </a>
+      </div>
+
+      <div class="brand-badge">
+        <span class="pulse-dot"></span>
+        24時間監視中
+      </div>
+      <h1>SBI IPO Monitor</h1>
+      <p class="subtitle">外国株式IPO「購入申込する」ボタンの<br>押下可能をいち早くメールでお知らせ</p>
+    </header>
+
+    <!-- Status Monitor -->
+    <section class="monitor-card" id="monitor" data-state="checking">
+      <div class="monitor-header">
+        <span class="monitor-label">
+          <span class="indicator"></span>
+          監視ステータス
+        </span>
+        <span class="monitor-time" id="monitor-time">--</span>
+      </div>
+
+      <div class="status-display">
+        <span class="status-icon" id="status-icon">🛰️</span>
+        <div class="status-text" id="status-text">CONNECTING...</div>
+        <div class="status-detail" id="status-detail">データを取得中です...</div>
+      </div>
+
+      <div class="monitor-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="stat-subscribers">--</div>
+          <div class="stat-label">登録者数</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-checks">--</div>
+          <div class="stat-label">チェック回数</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Email Registration -->
+    <section class="form-card" id="form-section">
+      <h2>📡 通知を受け取る</h2>
+      <p class="form-desc">
+        メールアドレスを登録すると、「購入申込する」ボタンが有効になった瞬間に通知をお送りします。<br>
+        登録は無料で、いつでも解除できます。
+      </p>
+
+      <div id="form-error" class="form-error"></div>
+
+      <form id="subscribe-form" autocomplete="off">
+        <div class="input-group">
+          <input
+            type="email"
+            id="email-input"
+            placeholder="your@email.com"
+            required
+            autocomplete="email"
+          >
+          <button type="submit" class="btn-submit" id="submit-btn">
+            監視を開始する
+          </button>
+        </div>
+      </form>
+
+      <div class="form-success" id="form-success">
+        <span class="success-icon">🚀</span>
+        <h3>登録完了！</h3>
+        <p>
+          確認メールをお送りしました。<br>
+          「購入申込する」ボタンが有効になり次第、<br>
+          すぐにメールでお知らせします。
+        </p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>
+        本サービスはSBI証券の外国株式IPOページを5分毎に自動チェックしています。<br>
+        SBI証券とは一切関係のないサービスです。
+      </p>
+      <p style="margin-top: 8px;">
+        <a href="https://www.sbisec.co.jp/ETGate/?_ControlID=WPLETmgR001Control&_PageID=WPLETmgR001Mdtl30&_ActionID=DefaultAID&_DataStoreID=DSWPLETmgR001Control&OutSide=on&getFlg=on&burl=search_foreign&cat1=foreign&cat2=ipo&dir=ipo&file=foreign_ipo_260527.html" target="_blank" rel="noopener">SBI証券 IPOページを開く ↗</a>
+      </p>
+      <a href="https://neoanaloglab.com/" target="_blank" rel="noopener" class="footer-brand">
+        Developed by <span class="lab-logo">neoanaloglab</span> ↗
+      </a>
+    </footer>
+  </main>
+
+  <script>
+    // ===================================================================
+    // Starfield Animation
+    // ===================================================================
+    (function() {
+      const canvas = document.getElementById('starfield');
+      const ctx = canvas.getContext('2d');
+      let stars = [];
+      let animationId;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function createStars() {
+        const count = Math.floor((canvas.width * canvas.height) / 1800);
+        stars = [];
+        for (let i = 0; i < count; i++) {
+          stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: Math.random() * 1.5 + 0.3,
+            opacity: Math.random(),
+            twinkleSpeed: Math.random() * 0.015 + 0.005,
+            twinkleOffset: Math.random() * Math.PI * 2,
+          });
+        }
+      }
+
+      function draw(timestamp) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw nebula glow
+        const cx = canvas.width * 0.5;
+        const cy = canvas.height * 0.4;
+        const nebulaGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.height * 0.6);
+        nebulaGrad.addColorStop(0, 'rgba(108, 92, 231, 0.04)');
+        nebulaGrad.addColorStop(0.5, 'rgba(61, 90, 241, 0.02)');
+        nebulaGrad.addColorStop(1, 'rgba(6, 6, 14, 0)');
+        ctx.fillStyle = nebulaGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw stars
+        for (const star of stars) {
+          const opacity = star.opacity + Math.sin(timestamp * star.twinkleSpeed + star.twinkleOffset) * 0.3;
+          const alpha = Math.max(0.1, Math.min(1, opacity));
+
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(232, 232, 240, ${alpha})`;
+          ctx.fill();
+
+          // Brighter stars get a subtle glow
+          if (star.r > 1 && alpha > 0.6) {
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.r * 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(200, 200, 240, ${alpha * 0.1})`;
+            ctx.fill();
+          }
+        }
+
+        animationId = requestAnimationFrame(draw);
+      }
+
+      resize();
+      createStars();
+      animationId = requestAnimationFrame(draw);
+
+      window.addEventListener('resize', () => {
+        resize();
+        createStars();
+      });
+    })();
+
+    // ===================================================================
+    // Status Monitor
+    // ===================================================================
+    (function() {
+      const monitor = document.getElementById('monitor');
+      const statusIcon = document.getElementById('status-icon');
+      const statusText = document.getElementById('status-text');
+      const statusDetail = document.getElementById('status-detail');
+      const monitorTime = document.getElementById('monitor-time');
+      const statSubscribers = document.getElementById('stat-subscribers');
+      const statChecks = document.getElementById('stat-checks');
+
+      function formatTime(isoString) {
+        if (!isoString) return '--';
+        const d = new Date(isoString + 'Z');
+        return d.toLocaleString('ja-JP', {
+          month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          timeZone: 'Asia/Tokyo',
+        });
+      }
+
+      async function updateStatus() {
+        try {
+          const res = await fetch('/api/status');
+          if (!res.ok) throw new Error('API error');
+          const data = await res.json();
+
+          // Update stats
+          statSubscribers.textContent = data.activeSubscribers ?? '--';
+          statChecks.textContent = data.recentChecks?.length ?? '--';
+          monitorTime.textContent = data.lastCheckedAt
+            ? `最終チェック: ${formatTime(data.lastCheckedAt)} JST`
+            : '--';
+
+          const check = data.latestCheck;
+          if (!check) {
+            monitor.dataset.state = 'checking';
+            statusIcon.textContent = '🛰️';
+            statusText.textContent = 'INITIALIZING...';
+            statusDetail.textContent = '初回チェックを待機中です...';
+            return;
+          }
+
+          if (check.buttonFound && check.buttonEnabled) {
+            monitor.dataset.state = 'available';
+            statusIcon.textContent = '🔔';
+            statusText.textContent = '申込可能！';
+            statusDetail.textContent = '「購入申込する」ボタンが有効です。ただちにSBI証券のページでご確認ください！';
+          } else if (check.buttonFound && !check.buttonEnabled) {
+            monitor.dataset.state = 'unavailable';
+            statusIcon.textContent = '🔒';
+            statusText.textContent = '申込受付前';
+            statusDetail.textContent = '「購入申込する」ボタンは表示されていますが、まだ押せません。申込期間開始をお待ちください。';
+          } else {
+            monitor.dataset.state = 'monitoring';
+            statusIcon.textContent = '🛰️';
+            statusText.textContent = '監視継続中';
+            statusDetail.textContent = '現在「購入申込する」ボタンは検出されていません。5分毎に自動チェックを継続します。';
+          }
+
+          if (check.notified) {
+            statusDetail.textContent += '\n（通知送信済み）';
+          }
+        } catch (err) {
+          monitor.dataset.state = 'error';
+          statusIcon.textContent = '⚠️';
+          statusText.textContent = 'ERROR';
+          statusDetail.textContent = 'ステータスの取得に失敗しました。';
+        }
+      }
+
+      // Initial fetch
+      updateStatus();
+
+      // Refresh every 60 seconds
+      setInterval(updateStatus, 60000);
+    })();
+
+    // ===================================================================
+    // Subscription Form
+    // ===================================================================
+    (function() {
+      const form = document.getElementById('subscribe-form');
+      const emailInput = document.getElementById('email-input');
+      const submitBtn = document.getElementById('submit-btn');
+      const formError = document.getElementById('form-error');
+      const formSuccess = document.getElementById('form-success');
+      const toast = document.getElementById('toast');
+
+      function showToast(message, type) {
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3500);
+      }
+
+      // Check URL params for messages (from unsubscribe, etc.)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlMessage = urlParams.get('message');
+      const urlType = urlParams.get('type');
+      if (urlMessage) {
+        showToast(decodeURIComponent(urlMessage), urlType === 'success' ? 'success' : 'error');
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = emailInput.value.trim();
+        if (!email) {
+          formError.textContent = 'メールアドレスを入力してください。';
+          formError.classList.add('active');
+          return;
+        }
+
+        // Basic email regex
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          formError.textContent = '有効なメールアドレスを入力してください。';
+          formError.classList.add('active');
+          return;
+        }
+
+        // Clear error
+        formError.classList.remove('active');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span>送信中...';
+
+        try {
+          const res = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            form.style.display = 'none';
+            formSuccess.classList.add('active');
+            showToast(data.message, 'success');
+          } else {
+            formError.textContent = data.message || '登録に失敗しました。';
+            formError.classList.add('active');
+          }
+        } catch (err) {
+          formError.textContent = '通信エラーが発生しました。しばらくしてからお試しください。';
+          formError.classList.add('active');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '監視を開始する';
+        }
+      });
+
+      // Clear error on input
+      emailInput.addEventListener('input', () => {
+        formError.classList.remove('active');
+      });
+    })();
+  </script>
+</body>
+</html>

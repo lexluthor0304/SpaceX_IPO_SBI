@@ -1,0 +1,39 @@
+{
+  "name": "sbi-ipo-monitor",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-05-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "routes": [
+    {
+      "pattern": "spacexipo.tokugai.com",
+      "zone_id": "6516c616c2aced115d1146996d11fa3a"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sbi-ipo-monitor-db",
+      "database_id": "e4c22a51-bc6c-40f1-9b48-eed53d5ec447",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "SBI_IPO_URL": "https://www.sbisec.co.jp/ETGate/?_ControlID=WPLETmgR001Control&_PageID=WPLETmgR001Mdtl30&_ActionID=DefaultAID&_DataStoreID=DSWPLETmgR001Control&OutSide=on&getFlg=on&burl=search_foreign&cat1=foreign&cat2=ipo&dir=ipo&file=foreign_ipo_260527.html",
+    "SITE_TITLE": "SBI IPO 申込監視サービス",
+    "SENDER_EMAIL": "shibata@neoanaloglab.com",
+    "SENDER_NAME": "SBI IPO Monitor",
+    "SITE_URL": "https://spacexipo.tokugai.com"
+  }
+}
