@@ -374,6 +374,47 @@
       letter-spacing: 0.04em;
     }
 
+    /* Flip digit counter */
+    .flip-counter {
+      display: inline-flex;
+      gap: 2px;
+      perspective: 200px;
+    }
+
+    .flip-digit {
+      position: relative;
+      display: inline-flex;
+      width: 18px;
+      height: 32px;
+      overflow: hidden;
+      border-radius: 3px;
+      background: rgba(6, 6, 14, 0.6);
+      border: 1px solid rgba(108, 92, 231, 0.15);
+    }
+
+    .flip-digit-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      text-align: center;
+      line-height: 32px;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--starlight);
+    }
+
+    .flip-digit.flipping .flip-digit-inner {
+      animation: flipDigit 0.4s ease-in-out;
+    }
+
+    @keyframes flipDigit {
+      0%   { transform: rotateX(0deg); opacity: 1; }
+      40%  { transform: rotateX(90deg); opacity: 0; }
+      60%  { transform: rotateX(-90deg); opacity: 0; }
+      100% { transform: rotateX(0deg); opacity: 1; }
+    }
+
     .stat-label {
       font-size: 11px;
       color: var(--starlight-dim);
@@ -819,11 +860,11 @@
 
       <div class="monitor-stats">
         <div class="stat-item">
-          <div class="stat-value" id="stat-subscribers">--</div>
+          <div class="stat-value flip-counter" id="stat-subscribers"><span class="flip-digit"><span class="flip-digit-inner">-</span></span><span class="flip-digit"><span class="flip-digit-inner">-</span></span></div>
           <div class="stat-label">登録者数</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" id="stat-checks">--</div>
+          <div class="stat-value flip-counter" id="stat-checks"><span class="flip-digit"><span class="flip-digit-inner">-</span></span><span class="flip-digit"><span class="flip-digit-inner">-</span></span></div>
           <div class="stat-label">チェック回数</div>
         </div>
       </div>
@@ -978,6 +1019,45 @@
       const statSubscribers = document.getElementById('stat-subscribers');
       const statChecks = document.getElementById('stat-checks');
 
+      // Store last values for flip detection
+      let lastSubCount = -1;
+      let lastCheckCount = -1;
+
+      /** Update a flip counter with animation when digits change */
+      function updateFlipCounter(container, value) {
+        const digits = String(value).split('');
+        // Pad to at least 2 digits
+        while (digits.length < 2) digits.unshift('0');
+
+        // Get current displayed digits
+        const currentSpans = container.querySelectorAll('.flip-digit-inner');
+        const currentDigits = Array.from(currentSpans).map(s => s.textContent);
+
+        // Add/remove digit elements as needed
+        while (container.children.length < digits.length) {
+          const d = document.createElement('span');
+          d.className = 'flip-digit';
+          d.innerHTML = '<span class="flip-digit-inner">0</span>';
+          container.appendChild(d);
+        }
+        while (container.children.length > digits.length) {
+          container.removeChild(container.firstChild);
+        }
+
+        // Update each digit, animate if changed
+        const spans = container.querySelectorAll('.flip-digit');
+        digits.forEach((digit, i) => {
+          const inner = spans[i].querySelector('.flip-digit-inner');
+          if (inner.textContent !== digit) {
+            spans[i].classList.add('flipping');
+            inner.textContent = digit;
+            spans[i].addEventListener('animationend', () => {
+              spans[i].classList.remove('flipping');
+            }, { once: true });
+          }
+        });
+      }
+
       function formatTime(isoString) {
         if (!isoString) return '--';
         const d = new Date(isoString + 'Z');
@@ -994,9 +1074,11 @@
           if (!res.ok) throw new Error('API error');
           const data = await res.json();
 
-          // Update stats
-          statSubscribers.textContent = data.activeSubscribers ?? '--';
-          statChecks.textContent = data.totalChecks ?? '--';
+          // Update stats with flip animation
+          const subCount = data.activeSubscribers ?? 0;
+          const checkCount = data.totalChecks ?? 0;
+          if (subCount !== lastSubCount) { updateFlipCounter(statSubscribers, subCount); lastSubCount = subCount; }
+          if (checkCount !== lastCheckCount) { updateFlipCounter(statChecks, checkCount); lastCheckCount = checkCount; }
           monitorTime.textContent = data.lastCheckedAt
             ? `最終チェック: ${formatTime(data.lastCheckedAt)} JST`
             : '--';
