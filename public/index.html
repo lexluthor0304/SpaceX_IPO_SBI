@@ -7,6 +7,9 @@
   <meta name="theme-color" content="#06060e">
   <title>SBI IPO Monitor — 申込可能をいち早く通知</title>
 
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1069480025527043" crossorigin="anonymous"></script>
+
   <!-- Fonts: Orbitron for display, Noto Sans JP for body -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -618,6 +621,30 @@
       color: var(--nebula-purple);
     }
 
+    /* Ad container */
+    .ad-container {
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto 24px;
+      text-align: center;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease-out 0.25s both;
+    }
+
+    .ad-label {
+      font-size: 10px;
+      color: rgba(200, 200, 220, 0.2);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
     .footer-brand {
       display: inline-flex;
       align-items: center;
@@ -801,6 +828,17 @@
         </div>
       </div>
     </section>
+
+    <!-- Ad -->
+    <div class="ad-label">Advertisement</div>
+    <div class="ad-container">
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-1069480025527043"
+           data-ad-slot="auto"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+    </div>
 
     <!-- Email Registration -->
     <section class="form-card" id="form-section">
@@ -1090,6 +1128,9 @@
         formError.classList.remove('active');
       });
     })();
+
+    // Initialize AdSense
+    (adsbygoogle = window.adsbygoogle || []).push({});
   </script>
 </body>
 </html>
