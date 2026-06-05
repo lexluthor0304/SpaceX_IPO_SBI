@@ -185,12 +185,21 @@ export default {
     }
   },
 
-  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    console.log(`[Cron] Starting: ${controller.cron}`);
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const db = new Database(env.DB);
     ctx.waitUntil((async () => {
       try {
-        const result = await checkIPOButton(env.SBI_IPO_URL);
+        // Get last ETag for conditional request (minimizes server load)
+        const lastEtag = await db.getState("last_etag");
+
+        const result = await checkIPOButton(env.SBI_IPO_URL, lastEtag);
+
+        // Save new ETag for next check
+        if (result.etag) {
+          await db.setState("last_etag", result.etag);
+        }
+
+        // Log every check (even 304s, for monitoring)
         const checkId = await db.addCheckLog({
           checked_at: new Date().toISOString(),
           button_found: result.buttonFound,
@@ -200,11 +209,27 @@ export default {
           response_time_ms: result.responseTimeMs,
           notified: false,
           error_message: result.error,
+          httpStatus: result.httpStatus,
+          pageChanged: result.modified,
+          etag: result.etag,
         });
-        console.log(`[Cron] found=${result.buttonFound} enabled=${result.buttonEnabled}`);
+
+        // 304: page unchanged, skip analysis
+        if (!result.modified) {
+          // Only log every 10 minutes to reduce noise
+          const min = new Date().getUTCMinutes();
+          if (min % 10 === 0) {
+            console.log(`[Cron] 304 unchanged (${result.responseTimeMs}ms) etag=${result.etag?.substring(0, 12)}...`);
+          }
+          return;
+        }
+
+        console.log(`[Cron] 200 found=${result.buttonFound} enabled=${result.buttonEnabled} (${result.responseTimeMs}ms)`);
+
+        // Button available → notify all subscribers
         if (result.buttonFound && result.buttonEnabled && !(await db.hasNotifiedForLatest())) {
           const subs = await db.getActiveSubscribers();
-          console.log(`[Cron] Notifying ${subs.length} subscribers`);
+          console.log(`[Cron] 🚀 Notifying ${subs.length} subscribers`);
           const cfg: EmailConfig = { senderEmail: env.SENDER_EMAIL, senderName: env.SENDER_NAME, siteUrl: env.SITE_URL, siteTitle: env.SITE_TITLE, emailBinding: env.EMAIL };
           let ok = 0, fail = 0;
           for (let i = 0; i < subs.length; i += 5) {

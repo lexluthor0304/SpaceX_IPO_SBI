@@ -3,46 +3,77 @@
  *
  * Fetches the SBI IPO page and checks whether the 「購入申込する」
  * (Apply for Purchase) button is present and enabled.
+ *
+ * Supports conditional requests via ETag to minimize server load.
  */
 
 export interface CheckResult {
-  /** Whether the button was found on the page */
   buttonFound: boolean;
-  /** Whether the button is enabled (clickable) */
   buttonEnabled: boolean;
-  /** The button's text content */
   buttonText: string | null;
-  /** The page title */
   pageTitle: string | null;
-  /** Response time in milliseconds */
   responseTimeMs: number;
-  /** Any error that occurred during checking */
   error: string | null;
-  /** Raw HTML snippet around the button for debugging */
   debugSnippet: string | null;
-  /** Additional status info derived from the page */
   statusInfo: string | null;
+  /** HTTP status code */
+  httpStatus: number;
+  /** New ETag from response (for next conditional request) */
+  etag: string | null;
+  /** Whether the page was modified (false = 304 Not Modified) */
+  modified: boolean;
 }
 
 /**
  * Check the SBI IPO page for the 「購入申込する」button.
+ *
+ * @param pageUrl The SBI IPO page URL
+ * @param lastEtag The ETag from the previous response, for conditional request
+ * @returns CheckResult with button status and new ETag
  */
-export async function checkIPOButton(pageUrl: string): Promise<CheckResult> {
+export async function checkIPOButton(
+  pageUrl: string,
+  lastEtag?: string | null
+): Promise<CheckResult> {
   const startTime = Date.now();
 
   try {
-    // Fetch the page with a browser-like User-Agent
+    const headers: Record<string, string> = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
+    };
+
+    // Conditional request: only fetch if page changed since last check
+    if (lastEtag) {
+      headers["If-None-Match"] = lastEtag;
+    }
+
     const response = await fetch(pageUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-      },
+      headers,
       redirect: "follow",
     });
+
+    const responseTimeMs = Date.now() - startTime;
+    const newEtag = response.headers.get("etag") || null;
+
+    // 304 Not Modified — page hasn't changed, skip parsing
+    if (response.status === 304) {
+      return {
+        buttonFound: false,
+        buttonEnabled: false,
+        buttonText: null,
+        pageTitle: null,
+        responseTimeMs,
+        error: null,
+        debugSnippet: null,
+        statusInfo: "ページ未更新（304 Not Modified）",
+        httpStatus: 304,
+        etag: lastEtag ?? newEtag, // keep existing etag
+        modified: false,
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -50,14 +81,17 @@ export async function checkIPOButton(pageUrl: string): Promise<CheckResult> {
         buttonEnabled: false,
         buttonText: null,
         pageTitle: null,
-        responseTimeMs: Date.now() - startTime,
+        responseTimeMs,
         error: `HTTP ${response.status}: ${response.statusText}`,
         debugSnippet: null,
         statusInfo: null,
+        httpStatus: response.status,
+        etag: null,
+        modified: true,
       };
     }
 
-    // Check if we got a valid HTML response
+    // Validate content type
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
       return {
@@ -65,44 +99,30 @@ export async function checkIPOButton(pageUrl: string): Promise<CheckResult> {
         buttonEnabled: false,
         buttonText: null,
         pageTitle: null,
-        responseTimeMs: Date.now() - startTime,
+        responseTimeMs,
         error: `Unexpected content type: ${contentType}`,
         debugSnippet: null,
         statusInfo: null,
-      };
-    }
-
-    // Check content length - if too small, probably an error page
-    const contentLength = response.headers.get("content-length");
-    if (contentLength && parseInt(contentLength) < 500) {
-      return {
-        buttonFound: false,
-        buttonEnabled: false,
-        buttonText: null,
-        pageTitle: null,
-        responseTimeMs: Date.now() - startTime,
-        error: `Response too small (${contentLength} bytes), likely an error page`,
-        debugSnippet: null,
-        statusInfo: null,
+        httpStatus: response.status,
+        etag: newEtag,
+        modified: true,
       };
     }
 
     const html = await response.text();
-    const responseTimeMs = Date.now() - startTime;
-
-    // Extract page title
     const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
     const pageTitle = titleMatch ? titleMatch[1].trim() : null;
 
-    // Look for the 「購入申込する」button
-    // SBI uses various formats for this button. Check multiple patterns.
     const result = analyzeButtonState(html);
 
     return {
       ...result,
       pageTitle,
-      responseTimeMs,
+      responseTimeMs: Date.now() - startTime,
       error: null,
+      httpStatus: response.status,
+      etag: newEtag,
+      modified: true,
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -115,19 +135,15 @@ export async function checkIPOButton(pageUrl: string): Promise<CheckResult> {
       error: message,
       debugSnippet: null,
       statusInfo: null,
+      httpStatus: 0,
+      etag: null,
+      modified: true,
     };
   }
 }
 
 /**
  * Analyze the HTML to determine the state of the 「購入申込する」button.
- *
- * SBI Securities shows different states:
- * - Button present and enabled → Can apply!
- * - Button present but disabled/grayed out → Application period not yet started
- * - Text showing "申込期間外" or similar → Outside application period
- * - Text showing "取扱いません" or "お取扱いしません" → Not handling this IPO
- * - No button at all → Page might not have loaded properly
  */
 function analyzeButtonState(html: string): {
   buttonFound: boolean;
@@ -138,19 +154,14 @@ function analyzeButtonState(html: string): {
 } {
   const debugSnippets: string[] = [];
 
-  // -------------------------------------------------------
   // Pattern 1: <input type="submit"> or <input type="button">
-  // -------------------------------------------------------
   const inputPattern = /<input[^>]*?(?:value|alt)\s*=\s*["']購入申込[^"']*["'][^>]*>/gi;
   const inputMatches = html.match(inputPattern);
 
   if (inputMatches && inputMatches.length > 0) {
     for (const match of inputMatches) {
       debugSnippets.push(match);
-
-      // Check if disabled
       const isDisabled = /disabled/i.test(match) || /readonly/i.test(match);
-
       if (!isDisabled) {
         return {
           buttonFound: true,
@@ -160,8 +171,6 @@ function analyzeButtonState(html: string): {
           statusInfo: "購入申込ボタンが有効です！",
         };
       }
-
-      // Button found but disabled
       return {
         buttonFound: true,
         buttonEnabled: false,
@@ -172,16 +181,13 @@ function analyzeButtonState(html: string): {
     }
   }
 
-  // -------------------------------------------------------
   // Pattern 2: <a> tag with button text
-  // -------------------------------------------------------
   const anchorPattern = /<a[^>]*>[^<]*購入申込[^<]*<\/a>/gi;
   const anchorMatches = html.match(anchorPattern);
 
   if (anchorMatches && anchorMatches.length > 0) {
     for (const match of anchorMatches) {
       debugSnippets.push(match);
-
       const isDisabled =
         /disabled/i.test(match) ||
         /class="[^"]*disable[^"]*"/i.test(match) ||
@@ -197,7 +203,6 @@ function analyzeButtonState(html: string): {
           statusInfo: "購入申込リンクが有効です！",
         };
       }
-
       return {
         buttonFound: true,
         buttonEnabled: false,
@@ -208,16 +213,13 @@ function analyzeButtonState(html: string): {
     }
   }
 
-  // -------------------------------------------------------
   // Pattern 3: <button> element
-  // -------------------------------------------------------
   const buttonPattern = /<button[^>]*>[^<]*購入申込[^<]*<\/button>/gi;
   const buttonMatches = html.match(buttonPattern);
 
   if (buttonMatches && buttonMatches.length > 0) {
     for (const match of buttonMatches) {
       debugSnippets.push(match);
-
       const isDisabled =
         /disabled/i.test(match) ||
         /class="[^"]*disable[^"]*"/i.test(match) ||
@@ -233,7 +235,6 @@ function analyzeButtonState(html: string): {
         };
       }
     }
-
     return {
       buttonFound: true,
       buttonEnabled: false,
@@ -243,20 +244,16 @@ function analyzeButtonState(html: string): {
     };
   }
 
-  // -------------------------------------------------------
-  // Pattern 4: Check for text indicating "購入申込" anywhere in the page
-  // -------------------------------------------------------
+  // Pattern 4: Text containing "購入申込" anywhere
   const textPattern = /購入申込(?:する|へ)?/g;
   const textMatches = html.match(textPattern);
 
   if (textMatches && textMatches.length > 0) {
-    // Find surrounding context (100 chars before and after)
     const idx = html.search(textPattern);
     const start = Math.max(0, idx - 100);
     const end = Math.min(html.length, idx + 200);
     const snippet = html.substring(start, end).replace(/\s+/g, " ").trim();
 
-    // The text exists but not as a button/link - might just be informational
     return {
       buttonFound: false,
       buttonEnabled: false,
@@ -266,9 +263,7 @@ function analyzeButtonState(html: string): {
     };
   }
 
-  // -------------------------------------------------------
-  // Pattern 5: Check for negative indicators (not handling, etc.)
-  // -------------------------------------------------------
+  // Pattern 5: Negative indicators
   const negativePatterns = [
     { pattern: /取扱いません/g, msg: "このIPO銘柄はSBI証券では取扱いません。" },
     { pattern: /お取扱いしません/g, msg: "このIPO銘柄はSBI証券ではお取扱いしません。" },
@@ -290,8 +285,7 @@ function analyzeButtonState(html: string): {
     }
   }
 
-  // No button found, no text found
-  // Get a snippet of the page for debugging
+  // No button found
   const bodyContent = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   const bodySnippet = bodyContent
     ? bodyContent[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().substring(0, 500)
@@ -302,6 +296,6 @@ function analyzeButtonState(html: string): {
     buttonEnabled: false,
     buttonText: null,
     debugSnippet: bodySnippet || html.substring(0, 500),
-    statusInfo: "「購入申込する」ボタンはページ上に見つかりませんでした。ページがまだ更新されていないか、URLが変更された可能性があります。",
+    statusInfo: "「購入申込する」ボタンはページ上に見つかりませんでした。",
   };
 }

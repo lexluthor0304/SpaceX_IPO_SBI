@@ -96,11 +96,11 @@ export class Database {
   }
 
   /** Add a check log entry */
-  async addCheckLog(log: Omit<CheckLog, "id">): Promise<number> {
+  async addCheckLog(log: Omit<CheckLog, "id"> & { httpStatus?: number; pageChanged?: boolean; etag?: string | null }): Promise<number> {
     const result = await this.db
       .prepare(
-        `INSERT INTO check_logs (checked_at, button_found, button_enabled, button_text, page_title, response_time_ms, notified, error_message)
-         VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO check_logs (checked_at, button_found, button_enabled, button_text, page_title, response_time_ms, notified, error_message, http_status, page_changed, etag)
+         VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         log.button_found ? 1 : 0,
@@ -109,10 +109,30 @@ export class Database {
         log.page_title ?? null,
         log.response_time_ms ?? null,
         log.notified ? 1 : 0,
-        log.error_message ?? null
+        log.error_message ?? null,
+        log.httpStatus ?? 0,
+        log.pageChanged !== false ? 1 : 0,
+        log.etag ?? null
       )
       .run();
     return result.meta.last_row_id ?? 0;
+  }
+
+  /** Get a state value by key */
+  async getState(key: string): Promise<string | null> {
+    const result = await this.db
+      .prepare("SELECT value FROM state WHERE key = ?")
+      .bind(key)
+      .first<{ value: string }>();
+    return result?.value ?? null;
+  }
+
+  /** Set a state value */
+  async setState(key: string, value: string): Promise<void> {
+    await this.db
+      .prepare("INSERT OR REPLACE INTO state (key, value, updated_at) VALUES (?, ?, datetime('now'))")
+      .bind(key, value)
+      .run();
   }
 
   /** Get the most recent check log */
