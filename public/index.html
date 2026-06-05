@@ -879,7 +879,7 @@
     <!-- Footer -->
     <footer class="footer">
       <p>
-        本サービスはSBI証券の外国株式IPOページを5分毎に自動チェックしています。<br>
+        本サービスはSBI証券の外国株式IPOページを1分毎に自動チェックしています。<br>
         SBI証券とは一切関係のないサービスです。
       </p>
       <p style="margin-top: 8px;">
@@ -996,7 +996,7 @@
 
           // Update stats
           statSubscribers.textContent = data.activeSubscribers ?? '--';
-          statChecks.textContent = data.recentChecks?.length ?? '--';
+          statChecks.textContent = data.totalChecks ?? '--';
           monitorTime.textContent = data.lastCheckedAt
             ? `最終チェック: ${formatTime(data.lastCheckedAt)} JST`
             : '--';
@@ -1024,7 +1024,7 @@
             monitor.dataset.state = 'monitoring';
             statusIcon.textContent = '🛰️';
             statusText.textContent = '監視継続中';
-            statusDetail.textContent = '現在「購入申込する」ボタンは検出されていません。5分毎に自動チェックを継続します。';
+            statusDetail.textContent = '現在「購入申込する」ボタンは検出されていません。1分毎に自動チェックを継続します。';
           }
 
           if (check.notified) {

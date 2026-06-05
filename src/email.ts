@@ -48,7 +48,7 @@ export async function sendWelcomeEmail(
     `「購入申込する」ボタンが押せるようになった際に、\n` +
     `ご登録のメールアドレスへ自動的にお知らせするサービスです。\n\n` +
     `■ 監視対象\nSBI証券 外国株式IPOページ\n\n` +
-    `■ 監視頻度\n5分毎に自動チェック\n\n` +
+    `■ 監視頻度\n1分毎に自動チェック\n\n` +
     `■ 登録解除\n${unsubscribeUrl}\n\n` +
     `━━━━━━━━━━━━━━━━━━━━━━━\n${config.siteTitle}\n${config.siteUrl}`;
 
@@ -64,7 +64,7 @@ export async function sendWelcomeEmail(
     `<p><strong>「購入申込する」ボタンが押せるようになった際</strong>に、ご登録のメールアドレスへ自動的にお知らせします。</p>` +
     `<table style="width:100%;border-collapse:collapse;margin:20px 0;background:#f8f8ff;border-radius:8px;">` +
     `<tr><td style="padding:10px 15px;font-weight:bold;width:120px;">🔍 監視対象</td><td style="padding:10px 15px;">SBI証券 外国株式IPOページ</td></tr>` +
-    `<tr><td style="padding:10px 15px;font-weight:bold;">⏱ 監視頻度</td><td style="padding:10px 15px;">5分毎に自動チェック</td></tr></table>` +
+    `<tr><td style="padding:10px 15px;font-weight:bold;">⏱ 監視頻度</td><td style="padding:10px 15px;">1分毎に自動チェック</td></tr></table>` +
     `<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:15px;margin:20px 0;">` +
     `<p style="margin:0;font-size:14px;">📌 登録解除：<a href="${unsubscribeUrl}">${unsubscribeUrl}</a></p></div>` +
     `</div><div style="text-align:center;padding:20px;color:#999;font-size:12px;">` +

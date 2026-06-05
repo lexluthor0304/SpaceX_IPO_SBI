@@ -95,6 +95,14 @@ export class Database {
     return result?.count ?? 0;
   }
 
+  /** Get total number of checks performed */
+  async getTotalCheckCount(): Promise<number> {
+    const result = await this.db
+      .prepare("SELECT COUNT(*) as count FROM check_logs")
+      .first<{ count: number }>();
+    return result?.count ?? 0;
+  }
+
   /** Add a check log entry */
   async addCheckLog(log: Omit<CheckLog, "id"> & { httpStatus?: number; pageChanged?: boolean; etag?: string | null }): Promise<number> {
     const result = await this.db

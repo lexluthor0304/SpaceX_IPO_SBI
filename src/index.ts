@@ -46,8 +46,11 @@ export default {
     if (pathname === "/api/stats") {
       try {
         const db = new Database(env.DB);
-        const count = await db.getActiveSubscriberCount();
-        return new Response(JSON.stringify({ activeSubscribers: count, monitoring: true }), {
+        const [count, totalChecks] = await Promise.all([
+          db.getActiveSubscriberCount(),
+          db.getTotalCheckCount(),
+        ]);
+        return new Response(JSON.stringify({ activeSubscribers: count, totalChecks, monitoring: true }), {
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
@@ -65,15 +68,17 @@ export default {
     if (pathname === "/api/status") {
       try {
         const db = new Database(env.DB);
-        const [latest, logs, count] = await Promise.all([
+        const [latest, logs, count, totalChecks] = await Promise.all([
           db.getLatestCheckLog(),
           db.getCheckLogs(5),
           db.getActiveSubscriberCount(),
+          db.getTotalCheckCount(),
         ]);
         return new Response(JSON.stringify({
           latestCheck: latest ? { checkedAt: latest.checked_at, buttonFound: latest.button_found, buttonEnabled: latest.button_enabled } : null,
           recentChecks: logs.map(l => ({ checkedAt: l.checked_at, buttonFound: l.button_found })),
           activeSubscribers: count,
+          totalChecks,
         }), {
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
